@@ -27,8 +27,6 @@ varianza2 p q =
 
 -- Reto 05
 
--- Reto 05
-
 clasificaTemperatura :: Int -> String
 clasificaTemperatura n
     | n <= 0  = "frio extremo"
