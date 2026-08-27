@@ -34,12 +34,33 @@ import Lexer (Token(..), lexer)
 
 ASA : nat                      { Num $1 }
     | bool                     { Boolean $1 }
-
+  
 -- RETO 2:
 -- Agrega las producciones para:
 --   * operadores n-arios con al menos dos argumentos;
+
+    | '(' '+' lista ')'        { Add $3 }
+    | '(' '*' lista ')'        { Mul $3 }
+    | '(' "and" lista ')'      { And $3 }
+    | '(' "or" lista ')'       { Or $3 }
+
 --   * operadores estrictamente binarios: expt y eq;
+
+    | '(' '-' expr expr ')'    { Sub [$3, $4] }
+    | '(' '/' expr expr ')'    { Div [$3, $4] }
+    | '(' "expt" expr expr ')' { Expt $3 $4 }
+    | '(' "eq" expr expr ')'   { EqP $3 $4 }
+    | '(' '<' expr expr ')'    { Lt [$3, $4] }
+    | '(' '>' expr expr ')'    { Gt [$3, $4] }
+    | '(' "<=" expr expr ')'   { Le [$3, $4] }
+    | '(' ">=" expr expr ')'   { Ge [$3, $4] }
+
 --   * operadores unarios: not, add1, sub1, zero?.
+
+    | '(' "not" expr ')'       { Not $3 }
+    | '(' "add1" expr ')'      { Add1 $3 }
+    | '(' "sub1" expr ')'      { Sub1 $3 }
+    | '(' "zero?" expr ')'     { ZeroP $3 }
 
 -- RETO 3:
 -- Agrega un no terminal para representar dos o mas argumentos.
