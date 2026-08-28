@@ -43,13 +43,13 @@ ASA : nat                      { Num $1 }
     | '(' '*' lista ')'        { Mul $3 }
     | '(' "and" lista ')'      { And $3 }
     | '(' "or" lista ')'       { Or $3 }
-
     | '(' '-' lista ')'        { Sub $3 }
     | '(' '/' lista ')'        { Div $3 }
     | '(' '<' lista ')'        { Lt $3 }
     | '(' '>' lista ')'        { Gt $3 }
     | '(' "<=" lista ')'       { Le $3 }
     | '(' ">=" lista ')'       { Ge $3 }
+
 --   * operadores estrictamente binarios: expt y eq;
 
     | '(' "expt" ASA ASA ')'   { Expt $3 $4 }
