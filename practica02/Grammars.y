@@ -44,16 +44,16 @@ ASA : nat                      { Num $1 }
     | '(' "and" lista ')'      { And $3 }
     | '(' "or" lista ')'       { Or $3 }
 
+    | '(' '-' lista ')'        { Sub $3 }
+    | '(' '/' lista ')'        { Div $3 }
+    | '(' '<' lista ')'        { Lt $3 }
+    | '(' '>' lista ')'        { Gt $3 }
+    | '(' "<=" lista ')'       { Le $3 }
+    | '(' ">=" lista ')'       { Ge $3 }
 --   * operadores estrictamente binarios: expt y eq;
 
-    | '(' '-' ASA ASA ')'    { Sub [$3, $4] }
-    | '(' '/' ASA ASA ')'    { Div [$3, $4] }
-    | '(' "expt" ASA ASA ')' { Expt $3 $4 }
-    | '(' "eq" ASA ASA ')'   { EqP $3 $4 }
-    | '(' '<' ASA ASA ')'    { Lt [$3, $4] }
-    | '(' '>' ASA ASA ')'    { Gt [$3, $4] }
-    | '(' "<=" ASA ASA ')'   { Le [$3, $4] }
-    | '(' ">=" ASA ASA ')'   { Ge [$3, $4] }
+    | '(' "expt" ASA ASA ')'   { Expt $3 $4 }
+    | '(' "eq" ASA ASA ')'     { EqP $3 $4 }
 
 --   * operadores unarios: not, add1, sub1, zero?.
 
