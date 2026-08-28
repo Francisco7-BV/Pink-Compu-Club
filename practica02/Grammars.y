@@ -46,25 +46,27 @@ ASA : nat                      { Num $1 }
 
 --   * operadores estrictamente binarios: expt y eq;
 
-    | '(' '-' expr expr ')'    { Sub [$3, $4] }
-    | '(' '/' expr expr ')'    { Div [$3, $4] }
-    | '(' "expt" expr expr ')' { Expt $3 $4 }
-    | '(' "eq" expr expr ')'   { EqP $3 $4 }
-    | '(' '<' expr expr ')'    { Lt [$3, $4] }
-    | '(' '>' expr expr ')'    { Gt [$3, $4] }
-    | '(' "<=" expr expr ')'   { Le [$3, $4] }
-    | '(' ">=" expr expr ')'   { Ge [$3, $4] }
+    | '(' '-' ASA ASA ')'    { Sub [$3, $4] }
+    | '(' '/' ASA ASA ')'    { Div [$3, $4] }
+    | '(' "expt" ASA ASA ')' { Expt $3 $4 }
+    | '(' "eq" ASA ASA ')'   { EqP $3 $4 }
+    | '(' '<' ASA ASA ')'    { Lt [$3, $4] }
+    | '(' '>' ASA ASA ')'    { Gt [$3, $4] }
+    | '(' "<=" ASA ASA ')'   { Le [$3, $4] }
+    | '(' ">=" ASA ASA ')'   { Ge [$3, $4] }
 
 --   * operadores unarios: not, add1, sub1, zero?.
 
-    | '(' "not" expr ')'       { Not $3 }
-    | '(' "add1" expr ')'      { Add1 $3 }
-    | '(' "sub1" expr ')'      { Sub1 $3 }
-    | '(' "zero?" expr ')'     { ZeroP $3 }
+    | '(' "not" ASA ')'       { Not $3 }
+    | '(' "add1" ASA ')'      { Add1 $3 }
+    | '(' "sub1" ASA ')'      { Sub1 $3 }
+    | '(' "zero?" ASA ')'     { ZeroP $3 }
 
 -- RETO 3:
 -- Agrega un no terminal para representar dos o mas argumentos.
 -- El resultado debe ser una lista de ASA.
+lista : ASA ASA   {[$1, $2]}
+      | ASA lista {$1 : $2}
 
 {
 parseError :: [Token] -> a
