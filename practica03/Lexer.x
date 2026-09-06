@@ -45,6 +45,12 @@ tokens :-
                                       ++ show s) }
   @nat                  { \s -> TokenNum (read s) }
 
+  "let*"                { \_ -> TokenLetStar }
+  "let"                 { \_ -> TokenLet }
+  $letter$idrest*       { \s -> TokenId s }
+
+  -- *****************************************************
+  
   -- RETO 1
   -- Agrega, en el orden correcto, las reglas para:
   --   let, let* e identificadores.
@@ -53,7 +59,9 @@ tokens :-
                                       ++ show s
                                       ++ " | codepoints = "
                                       ++ show (map fromEnum s)) }
-
+				      
+  -- *****************************************************
+  
 {
 data Token
   = TokenId String
