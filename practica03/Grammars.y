@@ -37,6 +37,7 @@ import Lexer (Token(..))
 
 ASA : nat                           { Num $1 }
     | bool                          { Boolean $1 }
+    | var                           { Id $1 }
     | '(' '+' Args ')'              { Add $3 }
     | '(' '-' Args ')'              { Sub $3 }
     | '(' '*' Args ')'              { Mul $3 }
@@ -53,6 +54,8 @@ ASA : nat                           { Num $1 }
     | '(' "add1" ASA ')'            { Add1 $3 }
     | '(' "sub1" ASA ')'            { Sub1 $3 }
     | '(' "zero?" ASA ')'           { ZeroP $3 }
+    | '(' "let" '(' Bindings ')' ASA ')'   { Let $4 $6 }
+    | '(' "let*" '(' Bindings ')' ASA ')'  { LetStar $4 $6 }
 
 -- RETO 2
 -- Completa las producciones para:
@@ -61,8 +64,17 @@ ASA : nat                           { Num $1 }
 --   * let* con una o mas asociaciones;
 --   * los no terminales Bindings y Binding.
 
+
+
 Args : ASA ASA                       { [$1, $2] }
      | ASA Args                      { $1 : $2 }
+
+
+Bindings : Binding                   { [$1] }
+         | Binding Bindings          { $1 : $2 }
+
+Binding : '(' var ASA ')'            { ($2, $3) }
+
 
 {
 parseError :: [Token] -> a
