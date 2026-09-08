@@ -1,12 +1,13 @@
 module Interp where
 
 import Grammars
+import Control.Monad (foldM)
 
---*****************************************************
+-- *****************************************************
 
 -- RETO 3: sustitucion nominal que evita captura
 
---*************
+-- *************
 
 freeVars :: ASA -> [String]
 freeVars = sinRepetir . fv
@@ -39,7 +40,7 @@ freeVars = sinRepetir . fv
 
 
 
---**************
+-- **************
 
 names :: ASA -> [String]
 names = sinRepetir . nom
@@ -70,7 +71,7 @@ names = sinRepetir . nom
 
 
 
---********************
+-- ********************
 
 freshName :: [String] -> String
 freshName usados = head $ filter (`notElem` usados) (base : map (\n -> base ++ show n) [0..])
@@ -79,7 +80,7 @@ freshName usados = head $ filter (`notElem` usados) (base : map (\n -> base ++ s
 
 
 
---********************
+-- ********************
 
 sust :: ASA -> String -> ASA -> ASA
 sust expr var valor = aux expr
@@ -134,7 +135,7 @@ sust expr var valor = aux expr
 
 
 
---**************
+-- **************
 
 sustMany :: ASA -> [Binding] -> ASA
 sustMany expr ligas = aux expr
@@ -194,12 +195,133 @@ sustMany expr ligas = aux expr
 
 
 
---////////////////////////
+-- ////////////////////////
 sinRepetir :: Eq a => [a] -> [a]
 sinRepetir = foldr (\x xs -> if x `elem` xs then xs else x : xs) []
 
---******************************************************
+-- ******************************************************
 
 -- RETO 4: semantica operacional de paso grande
 -- let es simultaneo; let* se evalua directamente, asociacion por asociacion.
 bigStep :: ASA -> Maybe ASA
+
+bigStep (Num n) = Just (Num n)
+
+bigStep (Boolean b ) = Just (Boolean b)
+
+bigStep (Id _) = Nothing
+
+bigStep (Add es) = do
+  ns <- mapM evalNum es 
+  return (Num (sum ns))
+
+
+bigStep (Mul es) = do
+   ns <- mapM evalNum es 
+   return (Num (product ns))
+
+bigStep (Sub es) = do
+  ns <- mapM evalNum es
+  case ns of 
+    (n:ns') -> return (Num (foldl truncSub n ns'))
+    []      -> Nothing
+
+
+bigStep (Div es) = do 
+  ns <- mapM evalNum es 
+  case ns of 
+    (n:ns') -> Num <$> foldM validaDiv n ns'
+    []      -> Nothing
+
+
+bigStep(And es) = do
+  bs <- mapM evalBool es 
+  return (Boolean (and bs))
+
+
+bigStep (Or es) = do
+  bs <- mapM evalBool es
+  return (Boolean (or bs))
+
+bigStep (Lt es) = comparadorAux (<) es
+
+bigStep (Gt es) = comparadorAux (>) es
+
+bigStep (Le es) = comparadorAux (<=) es
+
+bigStep (Ge es) = comparadorAux (>=) es
+
+bigStep (Expt a b) = do
+  n <- evalNum a
+  m <- evalNum b
+  return (Num (n ^ m))
+ 
+bigStep (EqP a b) = do
+  va <- bigStep a
+  vb <- bigStep b
+  case (va, vb) of
+    (Num n1, Num n2)         -> Just (Boolean (n1 == n2))
+    (Boolean b1, Boolean b2) -> Just (Boolean (b1 == b2))
+    _                        -> Nothing
+ 
+bigStep (Not e) = do
+  v <- bigStep e
+  case v of
+    Boolean b -> Just (Boolean (not b))
+    Num _     -> Just (Boolean False)
+    _         -> Nothing
+ 
+
+bigStep (Add1 e) = do
+  n <- evalNum e
+  return (Num (n + 1))
+ 
+bigStep (Sub1 e) = do
+  n <- evalNum e
+  return (Num (truncSub n 1))
+ 
+bigStep (ZeroP e) = do
+  n <- evalNum e
+  return (Boolean (n == 0))
+ 
+
+bigStep (Let ligas cuerpo) = do
+  let xs = map fst ligas
+  if length xs /= length (sinRepetir xs)
+    then Nothing
+    else do
+      vs <- mapM (bigStep . snd) ligas
+      bigStep (sustMany cuerpo (zip xs vs))
+ 
+
+bigStep (LetStar [] cuerpo) = bigStep cuerpo
+bigStep (LetStar ((x, e) : resto) cuerpo) = do
+  v <- bigStep e
+  bigStep (sust (LetStar resto cuerpo) x v)
+ 
+
+
+evalNum :: ASA -> Maybe Int
+evalNum e = bigStep e >>= asNum
+  where 
+      asNum (Num n) = Just n
+      asNum _       = Nothing
+
+truncSub :: Int -> Int -> Int
+truncSub a b = max 0 (a - b)
+
+validaDiv :: Int -> Int -> Maybe Int
+validaDiv _ 0 = Nothing
+validaDiv a b = Just (a `div` b)
+
+evalBool :: ASA -> Maybe Bool
+evalBool e = bigStep e >>= asBool
+  where 
+    asBool (Boolean b) = Just b
+    asBool _           = Nothing
+
+
+comparadorAux :: (Int -> Int -> Bool) -> [ASA] -> Maybe ASA
+comparadorAux op es = do
+  ns <- mapM evalNum es
+  return (Boolean (and (zipWith op ns (drop 1 ns))))
