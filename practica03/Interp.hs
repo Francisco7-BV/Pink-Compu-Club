@@ -120,21 +120,22 @@ sust expr var valor = aux expr
       let go [] b = aux b
           go ((y,e):rest) b =
             let e' = aux e
-                rest' = if var == y then LetStar rest b else go rest b
+                rest' = if var == y
+                        then LetStar rest b
+                        else go rest b
                 libresValor = freeVars valor
-                rest'' = if y `elem` libresValor
-                         then let nuevo = freshName (names (LetStar ligas cuerpo) ++ libresValor)
-                              in sust rest' y (Id nuevo)
-                         else rest'
-                ligador = if y `elem` libresValor
-                          then let nuevo = freshName (names (LetStar ligas cuerpo) ++ libresValor)
-                               in (nuevo, e')
-                          else (y, e')
-            in LetStar [ligador] rest''
+                used = names (LetStar ligas cuerpo) ++ libresValor
+                (rest'', nuevoY) = if y `elem` libresValor
+                                   then let nuevo = freshName used
+                                        in (sust rest' y (Id nuevo), nuevo)
+                                   else (rest', y)
+                ligador = if y `elem` libresValor then (nuevoY, e') else (y, e')
+            in
+              case rest'' of
+                LetStar restBs restBody -> LetStar (ligador : restBs) restBody
+                _ -> LetStar [ligador] rest''
       in go ligas cuerpo
-
-
-
+ 
 -- **************
 
 sustMany :: ASA -> [Binding] -> ASA
@@ -175,25 +176,23 @@ sustMany expr ligas = aux expr
           ligasInt'' = map (\(y,e) -> case lookup y renombres of Just n -> (n,e); Nothing -> (y,e)) ligasInt'
       in Let ligasInt'' cuerpo''
 
-
     aux (LetStar ligasInt cuerpo) =
       let go [] b = aux b
           go ((y,e):rest) b =
             let e' = aux e
                 rest' = go rest b
                 libresExt = concatMap (freeVars . snd) ligas
-                rest'' = if y `elem` libresExt
-                         then let nuevo = freshName (names (LetStar ligasInt cuerpo) ++ libresExt)
-                              in sust rest' y (Id nuevo)
-                         else rest'
-                ligador = if y `elem` libresExt
-                          then let nuevo = freshName (names (LetStar ligasInt cuerpo) ++ libresExt)
-                               in (nuevo, e')
-                          else (y, e')
-            in LetStar [ligador] rest''
+                used = names (LetStar ligasInt cuerpo) ++ libresExt
+                (rest'', nuevoY) = if y `elem` libresExt
+                                   then let nuevo = freshName used
+                                        in (sust rest' y (Id nuevo), nuevo)
+                                   else (rest', y)
+                ligador = if y `elem` libresExt then (nuevoY, e') else (y, e')
+            in
+              case rest'' of
+                LetStar restBs restBody -> LetStar (ligador : restBs) restBody
+                _ -> LetStar [ligador] rest''
       in go ligasInt cuerpo
-
-
 
 -- ////////////////////////
 sinRepetir :: Eq a => [a] -> [a]
