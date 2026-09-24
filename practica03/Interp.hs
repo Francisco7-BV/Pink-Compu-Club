@@ -106,7 +106,7 @@ sust expr var valor = aux expr
     aux (ZeroP a) = ZeroP (aux a)
 
     aux (Let ligas cuerpo) =
-      let ligadas = map fst ligas
+            let ligadas = map fst ligas
           ligas' = map (\(y,e) -> (y, aux e)) ligas
           cuerpo' = if var `elem` ligadas then cuerpo else aux cuerpo
           libresValor = freeVars valor
@@ -135,8 +135,35 @@ sust expr var valor = aux expr
                 LetStar restBs restBody -> LetStar (ligador : restBs) restBody
                 _ -> LetStar [ligador] rest''
       in go ligas cuerpo
- 
--- **************
+
+      aux (Let ligas cuerpo) =
+      let ligadas = map fst ligas
+          ligas' = map (\(y,e) -> (y, aux e)) ligas
+          cuerpo' = if var `elem` ligadas then cuerpo else aux cuerpo
+          libresValor = freeVars valor
+          renombres = [(y, freshName (names (Let ligas cuerpo) ++ libresValor))
+                      | y <- ligadas, y `elem` libresValor]
+          cuerpo'' = foldr (\(old,new) acc -> sust acc old (Id new)) cuerpo' renombres
+          ligas'' = map (\(y,e) -> case lookup y renombres of Just n -> (n,e); Nothing -> (y,e)) ligas'
+      in Let ligas'' cuerpo''
+
+    aux (LetStar [] cuerpo) = LetStar [] (aux cuerpo)
+    aux (LetStar ((x, e) : rest) cuerpo) =
+      let e' = aux e
+      in if x == var
+         then LetStar ((x, e') : rest) cuerpo
+         else let libresVal = freeVars valor
+                  usados = names (LetStar ((x, e) : rest) cuerpo) ++ libresVal
+              in if x `elem` libresVal
+                 then let z = freshName usados
+                          restAndBody' = sust (LetStar rest cuerpo) x (Id z)
+                      in case aux restAndBody' of
+                           LetStar rest' cuerpo' -> LetStar ((z, e') : rest') cuerpo'
+                           _ -> LetStar [(z, e')] (aux restAndBody')
+                 else case aux (LetStar rest cuerpo) of
+                        LetStar rest' cuerpo' -> LetStar ((x, e') : rest') cuerpo'
+                        _ -> LetStar [(x, e')] (aux (LetStar rest cuerpo))
+
 
 sustMany :: ASA -> [Binding] -> ASA
 sustMany expr ligas = aux expr
