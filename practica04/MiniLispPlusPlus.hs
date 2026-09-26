@@ -6,18 +6,19 @@ import Interp
 import Lexer
 import System.Console.Haskeline (defaultSettings, getInputLine, runInputT)
 
+-- RETO 2: evalua ***************************************************
+
 -- Integra el analisis, el desazucarado y la evaluacion desde el ambiente
 -- vacio. Propaga Nothing desde cualquiera de las dos etapas finales.
 
-parsea :: String -> SASA
-parsea = parse . lexer
-
-
 evalua :: String -> Maybe Value
-evalua input = do
-  sasa <- Just (parsea input)
-  asa <- desugar sasa
-  bigStep [] asa
+evalua s =
+  let sasa = parse (lexer s) 
+   in do
+        asa <- desugar sasa
+        bigStep [] asa
+	
+-- ******************************************************
 
 -- Infraestructura provista: no forma parte de los retos.
 repl :: IO ()

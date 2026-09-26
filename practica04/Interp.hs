@@ -80,3 +80,60 @@ desugar (AppS f args)
       curryApp f' args'
   | otherwise = Nothing
 
+
+-- RETO 2: lookupEnv y bigStep *********************************
+
+-- Busca la asociacion mas reciente de un identificador.
+
+lookupEnv :: Nombre -> Env -> Maybe Value
+lookupEnv _ [] = Nothing
+lookupEnv n ((m, v) : restante)
+  | n == m   = Just v
+  | otherwise = lookupEnv n restante
+
+
+-- Evalua con alcance estatico. Fun produce una cerradura con el ambiente
+-- actual. App evalua primero la posicion de funcion, despues el argumento y
+-- por ultimo el cuerpo en el ambiente guardado por la cerradura.
+-- La aplicacion es ansiosa: el argumento se exige aunque el cuerpo no lo use.
+-- Conserva la resta truncada y la convencion de que todo numero cuenta como
+-- verdadero cuando aparece como operando de Not.
+
+bigStep :: Env -> ASA -> Maybe Value
+bigStep env expr = case expr of
+  Num n     -> Just (NumV n)
+  Boolean b -> Just (BooleanV b)
+  Id n -> lookupEnv n env
+
+  Add e1 e2 -> do
+    v1 <- bigStep env e1
+    v2 <- bigStep env e2
+    case (v1, v2) of
+      (NumV n1, NumV n2) -> Just (NumV (n1 + n2))
+      _                  -> Nothing
+
+  Sub e1 e2 -> do
+    v1 <- bigStep env e1
+    v2 <- bigStep env e2
+    case (v1, v2) of
+      (NumV n1, NumV n2) -> Just (NumV (max 0(n1 - n2)))
+      _                  -> Nothing
+
+  Not e -> do
+    v <- bigStep env e
+    case v of
+      BooleanV b -> Just (BooleanV (not b))
+      NumV _     -> Just (BooleanV False) 
+      _          -> Nothing
+
+  Fun x cuerpo -> Just (ClosureV x cuerpo env)
+
+  App f a -> do
+    vf <- bigStep env f
+    (x, cuerpo, defEnv) <- case vf of
+      ClosureV x cuerpo defEnv -> Just (x, cuerpo, defEnv)
+      _                        -> Nothing
+    va <- bigStep env a
+    bigStep ((x, va) : defEnv) cuerpo
+
+-- **************************************************
