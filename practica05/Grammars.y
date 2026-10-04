@@ -47,10 +47,20 @@ SASA : var                               { IdS $1 }
      --   (cond (<condicion> <rama>) ... (else <alternativa>))
      --   (letrec (<nombre> <definicion>) <cuerpo>)
      --
+     | '(' "if" SASA SASA SASA ')'       { IfS $3 $4 $5 }
+     | '(' "cond" '(' SASA SASA ')' Clauses ')'
+                                         { CondS (($4, $5) : fst $7) (snd $7) }
+     | '(' "letrec" '(' var SASA ')' SASA ')'
+                                         { LetRecS $4 $5 $7 }
      -- Un cond debe contener al menos una clausula ordinaria y terminar
      -- siempre con una clausula else. Consume la primera clausula ordinaria
      -- en la produccion de cond y define un no terminal Clauses para las
      -- clausulas restantes y el else final.
+
+Clauses : '(' "else" SASA ')'            { ([], $3) }
+        | '(' SASA SASA ')' Clauses      { (($2, $3) : fst $5, snd $5) }
+
+
 
 Params : var                             { [$1] }
        | var Params                      { $1 : $2 }

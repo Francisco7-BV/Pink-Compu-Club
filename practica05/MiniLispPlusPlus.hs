@@ -6,7 +6,7 @@ import Interp
 import Lexer
 import System.Console.Haskeline (InputT, defaultSettings, getInputLine, runInputT)
 
-********************************************************************************
+-- ****************************************************************************************
 
 -- RETO 5: integrar el combinador Y ----------------------------------------
 
@@ -38,8 +38,8 @@ evalua entrada =
     >>= desugar
     >>= bigStep prelude
     >>= strict
-
-*****************************************************************************************************
+    
+-- ****************************************************************************************
 
 -- Infraestructura provista. No forma parte de los retos.
 repl :: IO ()
