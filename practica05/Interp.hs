@@ -1,5 +1,6 @@
 module Interp where
 
+import Control.Monad (join)
 import Grammars
 
 data ASA
@@ -34,15 +35,13 @@ type Env = [(Nombre, Value)]
 
 -- Convierte una lista no vacia de parametros distintos en funciones
 -- unarias anidadas. El primer parametro queda en la funcion exterior.
+
 curryFun :: [Nombre] -> ASA -> Maybe ASA
 curryFun [] _ = Nothing
 curryFun [x] e = Just (Fun x e)
 curryFun (x : xs) e
-  | x `elem` xs = Nothing 
-  | otherwise = case curryFun xs e of
-      Just v -> Just (Fun x v)
-      Nothing -> Nothing
-
+  | x `elem` xs = Nothing
+  | otherwise   = Fun x <$> curryFun xs e
 
 -- Convierte una aplicacion con uno o mas argumentos en aplicaciones unarias
 -- asociadas por la izquierda.
@@ -55,7 +54,7 @@ curryApp f args = Just (foldl App f args)
 binaryOp :: (ASA -> ASA -> ASA) -> [ASA] -> Maybe ASA
 binaryOp _ [] = Nothing
 binaryOp _ [_] = Nothing
-binaryOp op (x:xs) = Just $ foldl op x xs
+binaryOp op (x:xs) = Just (foldl op x xs)
 
 
 
@@ -64,13 +63,11 @@ binaryOp op (x:xs) = Just $ foldl op x xs
 
 desugarCond :: [(SASA, SASA)] -> SASA -> Maybe ASA
 desugarCond [] alternativa = desugar alternativa
-desugarCond ((condicion, rama) : resto) alternativa = do
-  c <- desugar condicion
-  r <- desugar rama
-  a <- desugarCond resto alternativa
-  return (If c r a)
+desugarCond ((condicion, rama) : resto) alternativa =
+  buildIf <$> desugar condicion <*> desugar rama <*> desugarCond resto alternativa
 
-
+buildIf :: ASA -> ASA -> ASA -> ASA
+buildIf c r a = If c r a
 
 -- Elimina toda la sintaxis superficial. CondS se traduce a If anidados.
 -- LetRecS f definicion cuerpo se traduce usando el identificador Y:
@@ -90,45 +87,36 @@ desugar (AddS es) = binaryOp Add =<< mapM desugar es
 desugar (SubS es) = binaryOp Sub =<< mapM desugar es
 desugar (NotS e)  = Not <$> desugar e
 
-desugar (FunS ps cuerpo) = do
-  cuerpo' <- desugar cuerpo
-  curryFun ps cuerpo'
+desugar (FunS ps cuerpo) = curryFun ps =<< desugar cuerpo
 
-desugar (AppS f args) = do
-  f'    <- desugar f
-  args' <- mapM desugar args
-  curryApp f' args'
+desugar (AppS f args) =
+  join (curryApp <$> desugar f <*> mapM desugar args)
+  
+desugar (LetS x e cuerpo) =
+  buildLet <$> desugar e <*> desugar cuerpo
+  where
+    buildLet e' cuerpo' = App (Fun x cuerpo') e'
 
-desugar (LetS x e cuerpo) = do
-  e'      <- desugar e
-  cuerpo' <- desugar cuerpo
-  return (App (Fun x cuerpo') e')
+desugar (LetStarS bindings cuerpo) =
+  desugarBindings bindings =<< desugar cuerpo
 
-desugar (LetStarS bindings cuerpo) = do
-  cuerpo' <- desugar cuerpo
-  foldr (\(x, e) acc -> do
-            e' <- desugar e
-            return (App (Fun x acc) e'))
-        (Just cuerpo')
-        bindings
-
-desugar (IfS c t e) = do
-  c' <- desugar c
-  t' <- desugar t
-  e' <- desugar e
-  return (If c' t' e')
-
-
+desugar (IfS c t e) =
+  If <$> desugar c <*> desugar t <*> desugar e
 
 desugar (CondS clausulas alternativa) =
   desugarCond clausulas alternativa
 
-
 desugar (LetRecS f definicion cuerpo) =
-  desugar
-    (LetS f
-          (AppS (IdS "Y") (FunS [f] definicion))
-          cuerpo)
+  desugar (LetS f (AppS (IdS "Y") [FunS [f] definicion]) cuerpo)
+
+
+desugarBindings :: [(Nombre, SASA)] -> ASA -> Maybe ASA
+desugarBindings [] cuerpo = Just cuerpo
+desugarBindings ((x, e) : resto) cuerpo =
+  buildLet <$> desugar e <*> desugarBindings resto cuerpo
+  where
+    buildLet e' acc = App (Fun x acc) e'
+    
 -- ****************************************************************************************
 
 
@@ -162,7 +150,9 @@ strictNum env e = bigStep env e >>= strict >>= asNum
  
 strictBool :: Env -> ASA -> Maybe Bool
 strictBool env e = bigStep env e >>= strict >>= asBool
- 
+
+-- **************************************************************************************************
+
 -- Semantica de paso grande con alcance estatico y evaluacion perezosa.
 --
 -- * Id devuelve directamente la asociacion encontrada.
