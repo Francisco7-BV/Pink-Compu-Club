@@ -37,11 +37,16 @@ reversa :: [a] -> [a]
 reversa [] = []
 reversa (x : xs) = reversa xs ++ [x]
 
+reversaaux :: [a] -> [a] -> [a]
+reversaaux [] ys = ys
+reversaaux (x : xs) ys = reversaaux xs (x : ys)
+
 reversaCola :: [a] -> [a]
-reversaCola = undefined
+reversaCola xs = reversaaux xs [] 
 
 reversaCPS :: [a] -> ([a] -> r) -> r
-reversaCPS = undefined
+reversaCPS [] k = k []
+reversaCPS (x : xs) k = reversaCPS xs (\ys -> k (ys ++ [x]))
 
 -- 4. Concatenacion de una lista de listas ---------------------------------
 
@@ -49,11 +54,16 @@ concatena :: [[a]] -> [a]
 concatena [] = []
 concatena (xs : xss) = xs ++ concatena xss
 
+concatenainverso :: [[a]] -> [a] -> [a]
+concatenainverso [] ys = ys
+concatenainverso (xs : xss) ys = concatenainverso xss (reversaaux xs ys)
+
 concatenaCola :: [[a]] -> [a]
-concatenaCola = undefined
+concatenaCola xss = reversaaux (concatenainverso xss []) []
 
 concatenaCPS :: [[a]] -> ([a] -> r) -> r
-concatenaCPS = undefined
+concatenaCPS [] k = k []
+concatenaCPS (xs : xss) k = concatenaCPS xss (\ys -> k (xs ++ ys)) 
 
 -- 5. Intercalado de dos listas --------------------------------------------
 
@@ -63,8 +73,17 @@ intercala xs [] = xs
 intercala (x : xs) (y : ys) =
   x : y : intercala xs ys
 
+
+intercalaaux :: [a] -> [a] -> [a] -> [a]
+intercalaaux [] ys zs = reversaaux zs ys
+intercalaaux xs [] zs = reversaaux zs xs
+intercalaaux (x : xs) (y : ys) zs = intercalaaux xs ys (y : x : zs)
+
 intercalaCola :: [a] -> [a] -> [a]
-intercalaCola = undefined
+intercalaCola xs ys = intercalaaux xs ys []
 
 intercalaCPS :: [a] -> [a] -> ([a] -> r) -> r
-intercalaCPS = undefined
+intercalaCPS [] ys k = k ys
+intercalaCPS xs [] k = k xs
+intercalaCPS (x : xs) (y : ys) k =
+  intercalaCPS xs ys (\zs -> k (x : y : zs))
