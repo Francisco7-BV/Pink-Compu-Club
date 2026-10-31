@@ -17,7 +17,7 @@ potenciaCola n m = potenciaCola' n m 1
 
 potenciaCPS :: Int -> Int -> (Int -> r) -> r
 potenciaCPS n 0 k = k 1 
-potenciaCPS n m k = potenciaCPS n (m-1) (\acc -> k (n* acc)
+potenciaCPS n m k = potenciaCPS n (m-1) (\acc -> k (n* acc))
 
 -- 2. Longitud de una lista -------------------------------------------------
 
@@ -26,10 +26,14 @@ longitud [] = 0
 longitud (_ : xs) = 1 + longitud xs
 
 longitudCola :: [a] -> Int
-longitudCola = undefined
+longitudCola xs = longitudCola' xs 0
+  where
+    longitudCola' [] acc       = acc
+    longitudCola' (_ : xs) acc = longitudCola' xs (acc + 1)
 
 longitudCPS :: [a] -> (Int -> r) -> r
-longitudCPS = undefined
+longitudCPS [] k       = k 0
+longitudCPS (_ : xs) k = longitudCPS xs (\n -> k (n + 1))
 
 -- 3. Reversa de una lista --------------------------------------------------
 
